@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <string>
 #include "ClaudeTheme.h"    // correct
+#include "../ImGuiCanvasBackend.h"
 
 #include "Lua_Buffer.cpp"
 
@@ -27,6 +28,7 @@ bool ShowMenu = true;
 
 ImFont *font2 = nullptr;
 ImFont *pRegularFont = nullptr;
+static lgx::ImGuiCanvasBackend g_glassUi;
 
 ImVec4 to_vec4(float r, float g, float b, float a)
 {
@@ -967,13 +969,20 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
         ImGui_ImplAndroid_Init();
         ImGui_ImplOpenGL3_Init(OBFUSCATE("#version 300 es"));
+
+        // The ImGui backend uses framebuffer-pixel coordinates in this hook.
+        // Initialize LiquidGlass only after the GLES3 context and ImGui renderer
+        // are ready; glass draw callbacks are executed by RenderDrawData below.
+        g_glassUi.initialize(1.0f);
         initImGui = true;
     }
 
     ImGuiIO& io = ImGui::GetIO();
+    g_glassUi.beginFrame(io.DeltaTime); // Required before ImGui::NewFrame().
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplAndroid_NewFrame(glWidth, glHeight);
     ImGui::NewFrame();
+    g_glassUi.syncFrame();
 
     // ----------------------------------------------------------------
     // Persistent state
@@ -986,21 +995,65 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ShowMenu = false;
     }
 
+    // Liquid glass is drawn behind native ImGui widgets. Transparent window and
+    // child fills let the shader sample the game frame instead of a solid panel.
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.70f, 0.84f, 1.0f, 0.24f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.14f, 0.18f, 0.25f, 0.58f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.20f, 0.29f, 0.41f, 0.72f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.18f, 0.35f, 0.53f, 0.82f));
+    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.40f, 0.73f, 1.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.34f, 0.66f, 0.96f, 0.92f));
+    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.49f, 0.79f, 1.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.14f, 0.21f, 0.31f, 0.42f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.19f, 0.32f, 0.48f, 0.68f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.22f, 0.39f, 0.57f, 0.82f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 18.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 14.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
     // ----------------------------------------------------------------
-    // Floating toggle window (this is the single accent control)
+    // Floating toggle window (LiquidGlass pill)
     // ----------------------------------------------------------------
     {
         static const ImGuiWindowFlags toggleFlags =
-            ImGuiWindowFlags_NoResize        | ImGuiWindowFlags_NoSavedSettings |
-            ImGuiWindowFlags_NoCollapse      | ImGuiWindowFlags_NoScrollbar     |
-            ImGuiWindowFlags_AlwaysAutoResize| ImGuiWindowFlags_NoTitleBar;
+            ImGuiWindowFlags_NoResize       | ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_NoCollapse     | ImGuiWindowFlags_NoScrollbar    |
+            ImGuiWindowFlags_NoTitleBar;
 
-        ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(108, 56), ImGuiCond_Always);
         ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
 
         if (ImGui::Begin("##toggle", nullptr, toggleFlags)) {
+            const ImVec2 windowPos = ImGui::GetWindowPos();
+            const ImVec2 windowSize = ImGui::GetWindowSize();
+            g_glassUi.drawGlassPanel(
+                lgx::Box(windowPos.x, windowPos.y,
+                         windowPos.x + windowSize.x, windowPos.y + windowSize.y),
+                18.0f, 6.0f, lgx::Rgba(0.10f, 0.15f, 0.22f, 0.32f), true);
+
             ImGui::SetCursorPos(ImVec2(12, 10));
-            if (Claude::PrimaryButton(ShowMenu ? "Close" : "Menu", ImVec2(84, 36)))
+            const ImVec2 buttonPos = ImGui::GetCursorScreenPos();
+            const lgx::Box buttonBox(buttonPos.x, buttonPos.y,
+                                     buttonPos.x + 84.0f, buttonPos.y + 36.0f);
+            static lgx::PillButton menuButton;
+            menuButton.label = ShowMenu ? "Close" : "Menu";
+            menuButton.interactive = false; // ImGui owns the hit target below.
+            menuButton.tinted = true;
+            menuButton.tint = lgx::Rgba(0.24f, 0.54f, 0.88f, 0.43f);
+            menuButton.blurDp = 2.5f;
+            menuButton.lensHeightDp = 6.0f;
+            menuButton.lensAmountDp = 12.0f;
+            menuButton.spectral = 0.18f;
+            if (!g_glassUi.ready()) {
+                g_glassUi.drawGlassPanel(buttonBox, 18.0f, 0.0f,
+                                         lgx::Rgba(0.20f, 0.38f, 0.58f, 0.82f));
+            }
+            menuButton.draw(buttonBox);
+            ImGui::SetCursorScreenPos(buttonPos);
+            if (ImGui::InvisibleButton("##glass-menu-toggle", ImVec2(84, 36)))
                 ShowMenu = !ShowMenu;
         }
         ImGui::End();
@@ -1015,17 +1068,34 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             ImGuiCond_Once);
 
         static const ImGuiWindowFlags winFlags =
-            ImGuiWindowFlags_NoResize    | ImGuiWindowFlags_NoSavedSettings |
-            ImGuiWindowFlags_NoCollapse  | ImGuiWindowFlags_NoScrollbar;
+            ImGuiWindowFlags_NoResize       | ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_NoCollapse     | ImGuiWindowFlags_NoScrollbar    |
+            ImGuiWindowFlags_NoTitleBar;
 
-        // Sentence-case title. No version/build spam in the chrome.
         if (ImGui::Begin("Anoy Hax", &opened, winFlags)) {
+            const ImVec2 windowPos = ImGui::GetWindowPos();
+            const ImVec2 windowSize = ImGui::GetWindowSize();
+            g_glassUi.drawGlassPanel(
+                lgx::Box(windowPos.x, windowPos.y,
+                         windowPos.x + windowSize.x, windowPos.y + windowSize.y),
+                20.0f, 9.0f, lgx::Rgba(0.08f, 0.12f, 0.18f, 0.34f), true);
+
+            // Draw the title after the glass callback so it stays crisp.
+            ImGui::SetCursorPos(ImVec2(18, 13));
+            ImGui::TextColored(ImVec4(0.91f, 0.96f, 1.0f, 1.0f), "Anoy Hax");
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.52f, 0.70f, 0.88f, 0.92f), "LIQUID GLASS");
+            ImGui::SetCursorPos(ImVec2(16, 48));
 
             // ---------------- Left nav ----------------
-            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, Claude::RadiusCard);
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, Claude::Dark::surface);
-            ImGui::BeginChild("##nav", ImVec2(Claude::NavWidth, 0), true);
-            {
+            if (ImGui::BeginChild("##nav", ImVec2(Claude::NavWidth, 0), false)) {
+                const ImVec2 navPos = ImGui::GetWindowPos();
+                const ImVec2 navSize = ImGui::GetWindowSize();
+                g_glassUi.drawGlassPanel(
+                    lgx::Box(navPos.x, navPos.y, navPos.x + navSize.x,
+                             navPos.y + navSize.y),
+                    14.0f, 5.0f, lgx::Rgba(0.09f, 0.13f, 0.19f, 0.27f));
+
                 Claude::SectionHeader("Sections");
                 if (Claude::NavItem("Player ESP",     Settings::Tab == 1)) Settings::Tab = 1;
                 if (Claude::NavItem("World ESP",      Settings::Tab == 2)) Settings::Tab = 2;
@@ -1034,16 +1104,18 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
                 if (Claude::NavItem("Extra features", Settings::Tab == 5)) Settings::Tab = 5;
             }
             ImGui::EndChild();
-            ImGui::PopStyleColor();
-            ImGui::PopStyleVar();
 
             ImGui::SameLine();
 
             // ---------------- Right content ----------------
-            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, Claude::RadiusCard);
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, Claude::Dark::surface);
-            ImGui::BeginChild("##content", ImVec2(0, 0), true);
-            {
+            if (ImGui::BeginChild("##content", ImVec2(0, 0), false)) {
+                const ImVec2 contentPos = ImGui::GetWindowPos();
+                const ImVec2 contentSize = ImGui::GetWindowSize();
+                g_glassUi.drawGlassPanel(
+                    lgx::Box(contentPos.x, contentPos.y,
+                             contentPos.x + contentSize.x, contentPos.y + contentSize.y),
+                    14.0f, 5.0f, lgx::Rgba(0.09f, 0.13f, 0.19f, 0.27f));
+
                 if (Settings::Tab == 1) {
                     Claude::SectionHeader("Player ESP");
                     ImGui::Checkbox("ESP line",     &Cheat::Esp::Line);
@@ -1102,14 +1174,16 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
                 }
             }
             ImGui::EndChild();
-            ImGui::PopStyleColor();
-            ImGui::PopStyleVar();
         }
         ImGui::End();
     }
 
+    ImGui::PopStyleVar(4);
+    ImGui::PopStyleColor(12);
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    g_glassUi.finishFrame();
 
     return orig_eglSwapBuffers(dpy, surface);
 }

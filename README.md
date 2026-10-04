@@ -19,6 +19,40 @@
 本项目与原作者 Kyant 及其官方项目没有直接的隶属关系。原作者不对本项目的代码质量及维护负责。本项目仅供学习交流。
 
 
+## Dear ImGui / Android GLES3 接入
+
+仓库附带 `ImGuiCanvasBackend.h`，可把 LiquidGlass-Cpp 的画布绘制、指针输入和面板回调桥接到 Dear ImGui 的 `ImDrawList`。先确保工程包含 Dear ImGui，并把仓库中的所有 LiquidGlass `.cpp` 编译进 Android target；本库需要 C++17 与 GLES3。
+
+```cpp
+#include "imgui.h"
+#include "ImGuiCanvasBackend.h"
+
+static lgx::ImGuiCanvasBackend g_glass;
+
+// EGL/GLES context current, and after ImGui_ImplOpenGL3_Init():
+g_glass.initialize(1.0f); // 1.0 when ImGui uses framebuffer-pixel coordinates
+
+// Each frame, before ImGui::NewFrame():
+g_glass.beginFrame(ImGui::GetIO().DeltaTime);
+ImGui_ImplOpenGL3_NewFrame();
+ImGui_ImplAndroid_NewFrame(width, height);
+ImGui::NewFrame();
+g_glass.syncFrame();
+
+// Inside an active ImGui::Begin(), before that window's contents:
+const ImVec2 p = ImGui::GetWindowPos();
+const ImVec2 s = ImGui::GetWindowSize();
+g_glass.drawGlassPanel(lgx::Box(p.x, p.y, p.x + s.x, p.y + s.y),
+                       20.0f, 9.0f,
+                       lgx::Rgba(0.08f, 0.12f, 0.18f, 0.34f), true);
+
+// After ImGui::Render():
+ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+g_glass.finishFrame();
+```
+
+The adapter queues capture/paint callbacks in draw order and resets GLES state afterward. Keep glass windows/child backgrounds transparent so the shader can sample the scene behind them. See `使用说明.md` for frame ordering and details.
+
 ## 效果展示
 
 ![效果图1](Screenshot_2026-10-04-10-50-30-248_com.demo.imguifloat.jpg)
