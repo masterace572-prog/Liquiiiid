@@ -122,18 +122,37 @@ public:
             style.backdropOn = true;
             style.fallback = Rgba(0.075f, 0.09f, 0.13f, 0.92f);
             style.edge = EdgeLight::contour(-90.0f, 1.35f, 0xBFFFFFFFu);
-            style.edge.alpha = 0.64f;
+            style.edge.alpha = 0.72f;
             style.shadowOn = withShadow;
             style.shadow = DropShadow(22.0f, 0.0f, 6.0f, 0x46000000u, 1.0f);
             lgx::drawPanel(style, box);
         }
         else {
             const ImU32 fill = toImColor(tint);
-            const ImU32 edge = IM_COL32(255, 255, 255, 72);
+            const ImU32 edge = IM_COL32(255, 255, 255, 88);
             drawList->AddRectFilled(ImVec2(box.left, box.top),
                                      ImVec2(box.right, box.bottom), fill, radius);
             drawList->AddRect(ImVec2(box.left, box.top),
                               ImVec2(box.right, box.bottom), edge, radius, 0, 1.0f);
+        }
+
+        // Keep the material legible even on game surfaces where the captured
+        // framebuffer has little or no alpha. This wash is intentionally drawn
+        // after the shader callback; its low opacity preserves the refraction.
+        const float materialRadius = roundedRadius(box, radius);
+        drawList->AddRectFilled(ImVec2(box.left, box.top),
+                                ImVec2(box.right, box.bottom),
+                                IM_COL32(15, 29, 48, 58), materialRadius);
+        drawList->AddRect(ImVec2(box.left, box.top),
+                          ImVec2(box.right, box.bottom),
+                          IM_COL32(218, 236, 255, 122), materialRadius, 0, 1.0f);
+        const float shineInset = materialRadius * 0.82f;
+        const float shineLeft = box.left + shineInset;
+        const float shineRight = box.right - shineInset;
+        if (shineRight > shineLeft) {
+            drawList->AddLine(ImVec2(shineLeft, box.top + 1.0f),
+                              ImVec2(shineRight, box.top + 1.0f),
+                              IM_COL32(245, 250, 255, 160), 1.0f);
         }
 
         drawList->PopClipRect();

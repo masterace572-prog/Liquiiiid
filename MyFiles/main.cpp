@@ -1047,15 +1047,15 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.70f, 0.84f, 1.0f, 0.24f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.14f, 0.18f, 0.25f, 0.58f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.20f, 0.29f, 0.41f, 0.72f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.18f, 0.35f, 0.53f, 0.82f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.14f, 0.18f, 0.25f, 0.72f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.20f, 0.29f, 0.41f, 0.84f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.18f, 0.35f, 0.53f, 0.94f));
     ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.40f, 0.73f, 1.0f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.34f, 0.66f, 0.96f, 0.92f));
     ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.49f, 0.79f, 1.0f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.14f, 0.21f, 0.31f, 0.42f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.19f, 0.32f, 0.48f, 0.68f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.22f, 0.39f, 0.57f, 0.82f));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.14f, 0.25f, 0.40f, 0.72f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.19f, 0.36f, 0.56f, 0.86f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.22f, 0.43f, 0.64f, 0.96f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 18.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 14.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
@@ -1083,7 +1083,7 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             g_glassUi.drawGlassPanel(
                 lgx::Box(windowPos.x, windowPos.y,
                          windowPos.x + windowSize.x, windowPos.y + windowSize.y),
-                18.0f, 6.0f, lgx::Rgba(0.10f, 0.15f, 0.22f, 0.32f), true);
+                18.0f, 6.0f, lgx::Rgba(0.10f, 0.16f, 0.25f, 0.50f), true);
             if (traceGlassFrame) {
                 __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
                                     "LiquidGlass diag: toggle glass panel queued");
@@ -1130,7 +1130,7 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
             g_glassUi.drawGlassPanel(
                 lgx::Box(windowPos.x, windowPos.y,
                          windowPos.x + windowSize.x, windowPos.y + windowSize.y),
-                20.0f, 9.0f, lgx::Rgba(0.08f, 0.12f, 0.18f, 0.34f), true);
+                20.0f, 9.0f, lgx::Rgba(0.08f, 0.12f, 0.19f, 0.48f), true);
 
             // Draw the title after the glass callback so it stays crisp.
             ImGui::SetCursorPos(ImVec2(18, 13));
@@ -1146,7 +1146,7 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
                 g_glassUi.drawGlassPanel(
                     lgx::Box(navPos.x, navPos.y, navPos.x + navSize.x,
                              navPos.y + navSize.y),
-                    14.0f, 5.0f, lgx::Rgba(0.09f, 0.13f, 0.19f, 0.27f));
+                    14.0f, 5.0f, lgx::Rgba(0.09f, 0.14f, 0.22f, 0.40f));
 
                 Claude::SectionHeader("Sections");
                 if (Claude::NavItem("Player ESP",     Settings::Tab == 1)) Settings::Tab = 1;
@@ -1166,7 +1166,7 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
                 g_glassUi.drawGlassPanel(
                     lgx::Box(contentPos.x, contentPos.y,
                              contentPos.x + contentSize.x, contentPos.y + contentSize.y),
-                    14.0f, 5.0f, lgx::Rgba(0.09f, 0.13f, 0.19f, 0.27f));
+                    14.0f, 5.0f, lgx::Rgba(0.09f, 0.14f, 0.22f, 0.40f));
 
                 if (Settings::Tab == 1) {
                     Claude::SectionHeader("Player ESP");
