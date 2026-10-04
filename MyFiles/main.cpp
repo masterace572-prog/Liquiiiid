@@ -1036,6 +1036,12 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         traceGlassFrame = true;
     }
 
+    if (traceGlassFrame) {
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
+                            "LiquidGlass diag: frame %u before toggle window",
+                            currentGlassDiagFrame);
+    }
+
     // Liquid glass is drawn behind native ImGui widgets. Transparent window and
     // child fills let the shader sample the game frame instead of a solid panel.
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -1068,12 +1074,20 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
 
         if (ImGui::Begin("##toggle", nullptr, toggleFlags)) {
+            if (traceGlassFrame) {
+                __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
+                                    "LiquidGlass diag: toggle Begin complete");
+            }
             const ImVec2 windowPos = ImGui::GetWindowPos();
             const ImVec2 windowSize = ImGui::GetWindowSize();
             g_glassUi.drawGlassPanel(
                 lgx::Box(windowPos.x, windowPos.y,
                          windowPos.x + windowSize.x, windowPos.y + windowSize.y),
                 18.0f, 6.0f, lgx::Rgba(0.10f, 0.15f, 0.22f, 0.32f), true);
+            if (traceGlassFrame) {
+                __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
+                                    "LiquidGlass diag: toggle glass panel queued");
+            }
 
             ImGui::SetCursorPos(ImVec2(12, 10));
             const ImVec2 buttonPos = ImGui::GetCursorScreenPos();
@@ -1092,12 +1106,28 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
                 g_glassUi.drawGlassPanel(buttonBox, 18.0f, 0.0f,
                                          lgx::Rgba(0.20f, 0.38f, 0.58f, 0.82f));
             }
+            if (traceGlassFrame) {
+                __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
+                                    "LiquidGlass diag: before PillButton::draw");
+            }
             menuButton.draw(buttonBox);
+            if (traceGlassFrame) {
+                __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
+                                    "LiquidGlass diag: after PillButton::draw");
+            }
             ImGui::SetCursorScreenPos(buttonPos);
             if (ImGui::InvisibleButton("##glass-menu-toggle", ImVec2(84, 36)))
                 ShowMenu = !ShowMenu;
+            if (traceGlassFrame) {
+                __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
+                                    "LiquidGlass diag: toggle item complete");
+            }
         }
         ImGui::End();
+        if (traceGlassFrame) {
+            __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
+                                "LiquidGlass diag: toggle window complete");
+        }
     }
 
     // ----------------------------------------------------------------
@@ -1219,6 +1249,11 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui::End();
     }
 
+    if (traceGlassFrame) {
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
+                            "LiquidGlass diag: frame %u UI construction complete",
+                            currentGlassDiagFrame);
+    }
     ImGui::PopStyleVar(4);
     ImGui::PopStyleColor(12);
 
