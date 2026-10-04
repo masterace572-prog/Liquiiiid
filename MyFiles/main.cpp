@@ -920,6 +920,13 @@ void AutoEspOn()
  
 EGLBoolean (*orig_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
+    static bool loggedSwapHook = false;
+    if (!loggedSwapHook) {
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
+                            "LiquidGlass diag: eglSwapBuffers hook entered");
+        loggedSwapHook = true;
+    }
+
     eglQuerySurface(dpy, surface, EGL_WIDTH,  &glWidth);
     eglQuerySurface(dpy, surface, EGL_HEIGHT, &glHeight);
 
