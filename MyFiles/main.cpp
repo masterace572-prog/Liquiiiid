@@ -9,6 +9,7 @@
 #include <fstream>
 #include <unistd.h>
 #include <string>
+#include <android/log.h>
 #include "ClaudeTheme.h"    // correct
 #include "../ImGuiCanvasBackend.h"
 
@@ -936,7 +937,7 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     // One-time init
     // ----------------------------------------------------------------
     if (!initImGui) {
-        LOGI("LiquidGlass diag: beginning ImGui/GLES initialization (%dx%d)",
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass", "LiquidGlass diag: beginning ImGui/GLES initialization (%dx%d)",
              glWidth, glHeight);
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
@@ -972,23 +973,23 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         ImGui_ImplAndroid_Init();
         const bool openGLBackendReady =
             ImGui_ImplOpenGL3_Init(OBFUSCATE("#version 300 es"));
-        LOGI("LiquidGlass diag: ImGui OpenGL backend init=%d", openGLBackendReady ? 1 : 0);
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass", "LiquidGlass diag: ImGui OpenGL backend init=%d", openGLBackendReady ? 1 : 0);
 
         // The ImGui backend uses framebuffer-pixel coordinates in this hook.
         // Initialize LiquidGlass only after the GLES3 context and ImGui renderer
         // are ready; glass draw callbacks are executed by RenderDrawData below.
         if (openGLBackendReady) {
-            LOGI("LiquidGlass diag: shader startup begin");
+            __android_log_print(ANDROID_LOG_INFO, "LiquidGlass", "LiquidGlass diag: shader startup begin");
             const bool glassReady = g_glassUi.initialize(1.0f);
             if (glassReady) {
-                LOGI("LiquidGlass diag: shader startup succeeded");
+                __android_log_print(ANDROID_LOG_INFO, "LiquidGlass", "LiquidGlass diag: shader startup succeeded");
             }
             else {
-                LOGE("LiquidGlass diag: shader startup failed; using ImGui fallback");
+                __android_log_print(ANDROID_LOG_ERROR, "LiquidGlass", "LiquidGlass diag: shader startup failed; using ImGui fallback");
             }
         }
         else {
-            LOGE("LiquidGlass diag: skipping glass startup because ImGui GLES init failed");
+            __android_log_print(ANDROID_LOG_ERROR, "LiquidGlass", "LiquidGlass diag: skipping glass startup because ImGui GLES init failed");
         }
         initImGui = true;
     }
@@ -997,7 +998,7 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     const unsigned int currentGlassDiagFrame = ++glassDiagFrame;
     bool traceGlassFrame = currentGlassDiagFrame <= 3;
     if (traceGlassFrame) {
-        LOGI("LiquidGlass diag: frame %u begin", currentGlassDiagFrame);
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass", "LiquidGlass diag: frame %u begin", currentGlassDiagFrame);
     }
 
     ImGuiIO& io = ImGui::GetIO();
@@ -1007,7 +1008,7 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui::NewFrame();
     g_glassUi.syncFrame();
     if (traceGlassFrame) {
-        LOGI("LiquidGlass diag: frame %u ImGui NewFrame complete", currentGlassDiagFrame);
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass", "LiquidGlass diag: frame %u ImGui NewFrame complete", currentGlassDiagFrame);
     }
 
     // ----------------------------------------------------------------
@@ -1023,7 +1024,7 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     static bool lastLoggedMenuState = false;
     if (ShowMenu != lastLoggedMenuState) {
-        LOGI("LiquidGlass diag: menu visibility changed to %d", ShowMenu ? 1 : 0);
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass", "LiquidGlass diag: menu visibility changed to %d", ShowMenu ? 1 : 0);
         lastLoggedMenuState = ShowMenu;
         traceGlassFrame = true;
     }
@@ -1216,11 +1217,11 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
     ImGui::Render();
     if (traceGlassFrame) {
-        LOGI("LiquidGlass diag: frame %u entering RenderDrawData", currentGlassDiagFrame);
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass", "LiquidGlass diag: frame %u entering RenderDrawData", currentGlassDiagFrame);
     }
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     if (traceGlassFrame) {
-        LOGI("LiquidGlass diag: frame %u RenderDrawData complete", currentGlassDiagFrame);
+        __android_log_print(ANDROID_LOG_INFO, "LiquidGlass", "LiquidGlass diag: frame %u RenderDrawData complete", currentGlassDiagFrame);
     }
     g_glassUi.finishFrame();
 
