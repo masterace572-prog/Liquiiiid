@@ -1089,38 +1089,19 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
                                     "LiquidGlass diag: toggle glass panel queued");
             }
 
+            // Keep the hit target on native ImGui for compatibility. The
+            // LiquidGlass card behind it remains shader-backed; bypassing the
+            // library PillButton also isolates its first-frame crash path.
             ImGui::SetCursorPos(ImVec2(12, 10));
-            const ImVec2 buttonPos = ImGui::GetCursorScreenPos();
-            const lgx::Box buttonBox(buttonPos.x, buttonPos.y,
-                                     buttonPos.x + 84.0f, buttonPos.y + 36.0f);
-            static lgx::PillButton menuButton;
-            menuButton.label = ShowMenu ? "Close" : "Menu";
-            menuButton.interactive = false; // ImGui owns the hit target below.
-            menuButton.tinted = true;
-            menuButton.tint = lgx::Rgba(0.24f, 0.54f, 0.88f, 0.43f);
-            menuButton.blurDp = 2.5f;
-            menuButton.lensHeightDp = 6.0f;
-            menuButton.lensAmountDp = 12.0f;
-            menuButton.spectral = 0.18f;
-            if (!g_glassUi.ready()) {
-                g_glassUi.drawGlassPanel(buttonBox, 18.0f, 0.0f,
-                                         lgx::Rgba(0.20f, 0.38f, 0.58f, 0.82f));
-            }
             if (traceGlassFrame) {
                 __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
-                                    "LiquidGlass diag: before PillButton::draw");
+                                    "LiquidGlass diag: before native toggle button");
             }
-            menuButton.draw(buttonBox);
-            if (traceGlassFrame) {
-                __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
-                                    "LiquidGlass diag: after PillButton::draw");
-            }
-            ImGui::SetCursorScreenPos(buttonPos);
-            if (ImGui::InvisibleButton("##glass-menu-toggle", ImVec2(84, 36)))
+            if (ImGui::Button(ShowMenu ? "Close" : "Menu", ImVec2(84, 36)))
                 ShowMenu = !ShowMenu;
             if (traceGlassFrame) {
                 __android_log_print(ANDROID_LOG_INFO, "LiquidGlass",
-                                    "LiquidGlass diag: toggle item complete");
+                                    "LiquidGlass diag: native toggle button complete");
             }
         }
         ImGui::End();
