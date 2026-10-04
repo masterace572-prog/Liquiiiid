@@ -936,6 +936,8 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     // One-time init
     // ----------------------------------------------------------------
     if (!initImGui) {
+        LOGI("LiquidGlass diag: beginning ImGui/GLES initialization (%dx%d)",
+             glWidth, glHeight);
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
 
@@ -968,13 +970,34 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
         Claude::Apply();
 
         ImGui_ImplAndroid_Init();
-        ImGui_ImplOpenGL3_Init(OBFUSCATE("#version 300 es"));
+        const bool openGLBackendReady =
+            ImGui_ImplOpenGL3_Init(OBFUSCATE("#version 300 es"));
+        LOGI("LiquidGlass diag: ImGui OpenGL backend init=%d", openGLBackendReady ? 1 : 0);
 
         // The ImGui backend uses framebuffer-pixel coordinates in this hook.
         // Initialize LiquidGlass only after the GLES3 context and ImGui renderer
         // are ready; glass draw callbacks are executed by RenderDrawData below.
-        g_glassUi.initialize(1.0f);
+        if (openGLBackendReady) {
+            LOGI("LiquidGlass diag: shader startup begin");
+            const bool glassReady = g_glassUi.initialize(1.0f);
+            if (glassReady) {
+                LOGI("LiquidGlass diag: shader startup succeeded");
+            }
+            else {
+                LOGE("LiquidGlass diag: shader startup failed; using ImGui fallback");
+            }
+        }
+        else {
+            LOGE("LiquidGlass diag: skipping glass startup because ImGui GLES init failed");
+        }
         initImGui = true;
+    }
+
+    static unsigned int glassDiagFrame = 0;
+    const unsigned int currentGlassDiagFrame = ++glassDiagFrame;
+    bool traceGlassFrame = currentGlassDiagFrame <= 3;
+    if (traceGlassFrame) {
+        LOGI("LiquidGlass diag: frame %u begin", currentGlassDiagFrame);
     }
 
     ImGuiIO& io = ImGui::GetIO();
@@ -983,6 +1006,9 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplAndroid_NewFrame(glWidth, glHeight);
     ImGui::NewFrame();
     g_glassUi.syncFrame();
+    if (traceGlassFrame) {
+        LOGI("LiquidGlass diag: frame %u ImGui NewFrame complete", currentGlassDiagFrame);
+    }
 
     // ----------------------------------------------------------------
     // Persistent state
@@ -993,6 +1019,13 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     if (!opened) {
         opened   = true;
         ShowMenu = false;
+    }
+
+    static bool lastLoggedMenuState = false;
+    if (ShowMenu != lastLoggedMenuState) {
+        LOGI("LiquidGlass diag: menu visibility changed to %d", ShowMenu ? 1 : 0);
+        lastLoggedMenuState = ShowMenu;
+        traceGlassFrame = true;
     }
 
     // Liquid glass is drawn behind native ImGui widgets. Transparent window and
@@ -1182,7 +1215,13 @@ EGLBoolean _eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui::PopStyleColor(12);
 
     ImGui::Render();
+    if (traceGlassFrame) {
+        LOGI("LiquidGlass diag: frame %u entering RenderDrawData", currentGlassDiagFrame);
+    }
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    if (traceGlassFrame) {
+        LOGI("LiquidGlass diag: frame %u RenderDrawData complete", currentGlassDiagFrame);
+    }
     g_glassUi.finishFrame();
 
     return orig_eglSwapBuffers(dpy, surface);
